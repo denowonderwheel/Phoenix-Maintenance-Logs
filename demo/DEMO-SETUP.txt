@@ -1,0 +1,56 @@
+PHOENIX TRACKER — DEMO SANDBOX SETUP
+=====================================
+
+This folder is a sandbox copy of the tracker. It shares NOTHING with the
+live park app — separate database, separate logins, separate URL. Anything
+a tester does here cannot touch real park data.
+
+ONE-TIME SETUP (about 10 minutes, all in the Firebase console)
+--------------------------------------------------------------
+1. Go to console.firebase.google.com and sign in with your Google account.
+2. Click "Add project". Name it something obviously fake, e.g.
+   phoenix-tracker-demo. (Google Analytics: off is fine.)
+3. Build > Authentication > Get started > enable "Email/Password".
+4. Authentication > Settings > Authorized domains > Add domain:
+      denowonderwheel.github.io
+5. Build > Firestore Database > Create database > Production mode.
+6. Firestore > Rules tab > paste the contents of firestore.rules
+   (the same file the live app uses — it works unchanged) > Publish.
+7. Build > Storage > Get started > create the default bucket
+   (requires the Blaze plan; same location as Firestore, Production
+   mode). Then Storage > Rules tab > paste the contents of
+   storage.rules.txt > Publish. This enables photo attachments.
+8. Project settings (gear icon, top left) > scroll to "Your apps" >
+   click the web icon </> > register an app (any nickname) > copy the
+   firebaseConfig values it shows you.
+9. Open demo/index.html in a text editor, find the block marked with
+   warning signs near the top of the <script> (search for PASTE-DEMO),
+   and replace the placeholder values with the ones you copied.
+
+That's it. Push the demo folder to the GitHub repo and it will be live at:
+   https://denowonderwheel.github.io/Phoenix-Maintenance-Logs/demo/
+
+FOR YOUR TESTER
+---------------
+- The FIRST person to sign up automatically becomes the demo's admin —
+  no invite code needed. So either let your tester sign up first (they
+  get the full admin experience: invite codes, roster, team management,
+  reset-to-seed), or claim admin yourself and hand them an invite code.
+- Suggest they hit Reference > Reset to seed (admin only, asks for their
+  password) to fill the demo with the 132 realistic grease entries so it
+  doesn't start empty.
+- Sign-up is gated after the first user, so strangers finding the URL
+  can't get in without an invite code. Still, claim that first account
+  promptly after the demo goes live.
+
+KNOWN DEMO LIMITATIONS
+----------------------
+- The paragraph-reference links into the manual PDFs only work when the
+  file is opened locally with the PDFs next to it, same as the live app.
+
+CLEANUP WHEN DONE
+-----------------
+Delete the Firebase demo project (console > project settings > scroll
+down > Delete project) and remove the demo/ folder from the repo. Or
+keep it around as your own sandbox for testing new features before they
+go live.
