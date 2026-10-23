@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "vekoma-demo",
+    "demo": "vekoma-demo",
+    "live": "phoenix-maintenance-logs"
+  }
+}

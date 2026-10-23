@@ -54,3 +54,45 @@ Delete the Firebase demo project (console > project settings > scroll
 down > Delete project) and remove the demo/ folder from the repo. Or
 keep it around as your own sandbox for testing new features before they
 go live.
+
+
+VERSION 3 — ASK THE MANUALS (voice assistant) + LOGIN-ONLY MANUALS
+===================================================================
+Version 3 adds a "Ask the manuals" button: tap the mic, ask a question
+("what torque for the fixed EC brake bolts?"), and it answers out loud from
+the Phoenix manuals with the pages to check. Manuals now open only for
+signed-in users, inside the tracker.
+
+It needs server code (Cloud Functions in the functions/ folder) and a Claude
+API key. One-time setup for the demo project (vekoma-demo):
+
+1. Firebase console > vekoma-demo > Usage and billing: make sure the project
+   is on the Blaze plan (Cloud Functions require it).
+2. Put the manuals into the demo: sign in to the demo tracker as admin >
+   Reference tab > Upload PDF… for each manual (OMM, PRT, DIA, OEM, TS).
+   (Or Firebase console > Storage > create folder "manuals" > upload.)
+3. Claude API key: console.anthropic.com > API keys > Create key. Add a
+   little credit under Billing.
+4. Deploy key for GitHub: console.cloud.google.com > pick vekoma-demo >
+   IAM & Admin > Service accounts > Create service account
+   (name: github-deploy, role: Owner — fine for the sandbox) > open it >
+   Keys > Add key > JSON. A .json file downloads.
+5. GitHub > this repo > Settings > Secrets and variables > Actions >
+   New repository secret, twice:
+     FIREBASE_SERVICE_ACCOUNT_DEMO  = the whole contents of that .json file
+     ANTHROPIC_API_KEY              = the Claude API key
+   Then delete the .json file from your computer/phone.
+6. GitHub > Actions > "Deploy manual assistant" > Run workflow > demo.
+   Takes about 3-5 minutes the first time.
+7. Demo tracker > Reference tab > "Ask the manuals — search index" >
+   Rebuild index & lock links. Takes a few minutes; keep the page open.
+   This also switches off the manuals' old public download links.
+8. Tap "🎤 Ask the manuals" and try it.
+
+Every question and answer is saved in Firestore (collection assistantLog)
+with the pages used and the tokens spent, so answers and cost can be checked.
+Each user is limited to 60 questions a day (DAILY_QUESTIONS_PER_USER in
+functions/index.js).
+
+Never commit the manual PDFs to this repo — it is public and the manuals are
+Vekoma-confidential. They live only in Firebase Storage.

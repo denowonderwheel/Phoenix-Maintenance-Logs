@@ -1,0 +1,7 @@
+node_modules/
+*.local
+.firebase/
+firebase-debug.log
+# Manuals are confidential (Vekoma) — never commit PDFs or extracted text.
+*.pdf
+manual-index/

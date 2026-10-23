@@ -1,0 +1,65 @@
+# Deploys the manual-assistant Cloud Functions (functions/) to Firebase.
+# Run it from GitHub: Actions → "Deploy manual assistant" → Run workflow.
+#
+# Repository secrets it needs (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT_DEMO  JSON key of a service account in the vekoma-demo project
+#   ANTHROPIC_API_KEY              Claude API key (stored in Firebase Secret Manager on each deploy)
+# For the live app later: FIREBASE_SERVICE_ACCOUNT_LIVE, and pick "live" when running.
+name: Deploy manual assistant
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which Firebase project"
+        type: choice
+        options: [demo, live]
+        default: demo
+
+concurrency:
+  group: deploy-functions-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Firebase credentials
+        env:
+          SA_DEMO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEMO }}
+          SA_LIVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LIVE }}
+        run: |
+          if [ "${{ inputs.target }}" = "live" ]; then SA="$SA_LIVE"; else SA="$SA_DEMO"; fi
+          if [ -z "$SA" ]; then echo "::error::Service account secret for ${{ inputs.target }} is not set"; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Store Claude API key in Secret Manager
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then echo "::error::ANTHROPIC_API_KEY secret is not set"; exit 1; fi
+          umask 077
+          printf '%s' "$ANTHROPIC_API_KEY" > "$RUNNER_TEMP/anthropic.key"
+          npx --yes firebase-tools@15.33.0 functions:secrets:set ANTHROPIC_API_KEY \
+            --project "${{ inputs.target }}" --data-file "$RUNNER_TEMP/anthropic.key" --force --non-interactive
+          rm -f "$RUNNER_TEMP/anthropic.key"
+
+      - name: Deploy functions
+        run: npx --yes firebase-tools@15.33.0 deploy --only functions --project "${{ inputs.target }}" --force --non-interactive
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

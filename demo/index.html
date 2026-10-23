@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DEMO — Phoenix Coaster Tracker</title>
+<title>DEMO — Phoenix Coaster Tracker v3</title>
 <style>
   :root { color-scheme: light; --navy:#1F3A68; --gold:#F4A300; --goldL:#FFF4D6; --gray:#F1F1F1;
           --grayD:#999; --green:#2E7D32; --red:#C62828; --yellow:#F9A825; --text:#1c1c1c; }
@@ -654,13 +654,82 @@
     .photo-thumb { border-color: #999; }
   }
 </style>
+<style>
+  /* ====== v3: version badge, Ask-the-manuals panel, manual page viewer ====== */
+  .ver-badge { display:inline-block; font-size: 11px; font-weight: 700; color: var(--navy); background: var(--gold);
+               border-radius: 10px; padding: 1px 8px; vertical-align: middle; letter-spacing: 0.3px; }
+
+  .ask-fab { display: none; position: fixed; right: 16px; bottom: 16px; z-index: 900; align-items: center; gap: 8px;
+             background: var(--navy); color: #fff; border: 0; border-radius: 28px; padding: 12px 18px;
+             font: 700 15px/1 inherit; box-shadow: 0 6px 20px rgba(0,0,0,0.3); cursor: pointer; }
+  .ask-fab:hover { background: #2a4a82; }
+  body.role-admin .ask-fab, body.role-supervisor .ask-fab, body.role-mechanic .ask-fab { display: flex; }
+  /* Room below the last row of content so the floating button never covers a Save button. */
+  body.role-admin, body.role-supervisor, body.role-mechanic { padding-bottom: 84px; }
+  @media print { body.role-admin, body.role-supervisor, body.role-mechanic { padding-bottom: 0; } }
+  body.ask-open .ask-fab { display: none !important; }
+
+  .ask-panel { position: fixed; right: 16px; bottom: 16px; z-index: 950; width: 420px; max-width: calc(100vw - 32px);
+               height: min(640px, calc(100vh - 32px)); background: #fff; border-radius: 12px; display: none;
+               flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.35); overflow: hidden; }
+  body.ask-open .ask-panel { display: flex; }
+  .ask-head { background: var(--navy); color: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  .ask-head .t { font-weight: 700; flex: 1; }
+  .ask-head .sub { font-size: 11px; opacity: 0.8; font-weight: 400; }
+  .ask-head button { background: transparent; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 6px;
+                     padding: 4px 8px; font: inherit; cursor: pointer; }
+  .ask-log { flex: 1; overflow-y: auto; padding: 12px; background: #f6f7f9; -webkit-overflow-scrolling: touch; }
+  .ask-msg { margin: 0 0 10px; padding: 9px 11px; border-radius: 10px; max-width: 92%; font-size: 14px; line-height: 1.45;
+             word-wrap: break-word; }
+  .ask-msg.q { background: var(--navy); color: #fff; margin-left: auto; border-bottom-right-radius: 3px; }
+  .ask-msg.a { background: #fff; border: 1px solid #e0e0e0; border-bottom-left-radius: 3px; }
+  .ask-msg.err { background: #FFEBEE; border: 1px solid #f5c2c7; color: #8a1c1c; }
+  .ask-msg.pending { color: #666; font-style: italic; }
+  .ask-msg .warn { font-size: 12px; color: #8a5a00; background: var(--goldL); border-radius: 4px; padding: 3px 6px; margin-bottom: 6px; }
+  .ask-msg .cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ask-msg .cite { font-size: 12px; text-decoration: none; background: #EEF2F8; color: var(--navy); border: 1px solid #c9d4e6;
+                   border-radius: 12px; padding: 3px 9px; }
+  .ask-msg .cite:hover { background: var(--goldL); }
+  .ask-msg .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .ask-msg .meta button { background: none; border: 0; color: var(--navy); cursor: pointer; font: inherit; padding: 2px 4px; }
+  .ask-intro { font-size: 13px; color: #444; background: #fff; border: 1px dashed #c9d4e6; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .ask-intro ul { margin: 6px 0 0; padding-left: 18px; }
+  .ask-foot { border-top: 1px solid #e3e3e3; padding: 10px; display: flex; gap: 8px; align-items: center; background: #fff; }
+  .ask-foot input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid #c5c5c5; border-radius: 22px; }
+  .ask-mic { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; border: 0; background: var(--gold); color: var(--navy);
+             font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .ask-mic.listening { background: var(--red); color: #fff; animation: askPulse 1.2s infinite; }
+  .ask-mic[disabled] { opacity: 0.5; cursor: not-allowed; }
+  @keyframes askPulse { 0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.6); } 70% { box-shadow: 0 0 0 14px rgba(198,40,40,0); } 100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); } }
+  .ask-send { border: 0; background: var(--navy); color: #fff; border-radius: 22px; padding: 10px 14px; font: 700 14px inherit; cursor: pointer; }
+  .ask-note { font-size: 10.5px; color: #888; text-align: center; padding: 0 10px 8px; background: #fff; }
+  @media (max-width: 600px) {
+    .ask-panel { right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100%; height: 100dvh; border-radius: 0; }
+    .ask-fab { right: 12px; bottom: 12px; }
+  }
+
+  .mv-bg { position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.6); display: none; }
+  .mv-bg.open { display: flex; align-items: stretch; justify-content: center; }
+  .mv { background: #fff; width: min(1000px, 100vw); display: flex; flex-direction: column; }
+  .mv-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; background: var(--navy); color: #fff; }
+  .mv-head .t { flex: 1 1 180px; min-width: 0; font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mv-head .t small { display: block; font-weight: 400; font-size: 11px; opacity: 0.85; }
+  .mv-head button { background: transparent; border: 1px solid rgba(255,255,255,0.45); color: #fff; border-radius: 6px;
+                    padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .mv-head button[disabled] { opacity: 0.4; cursor: default; }
+  .mv-body { flex: 1; overflow: auto; background: #6b6b6b; padding: 10px; -webkit-overflow-scrolling: touch; }
+  .mv-page { margin: 0 auto 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.4); position: relative; }
+  .mv-page canvas { display: block; }
+  .mv-page .pg { position: absolute; top: 4px; right: 6px; font-size: 11px; background: rgba(31,58,104,0.85); color: #fff; border-radius: 8px; padding: 1px 7px; }
+  .mv-status { color: #fff; text-align: center; padding: 30px 10px; font-size: 14px; }
+</style>
 </head>
 <body>
 
 <!-- ====== DEMO RIBBON (this file is the sandbox copy — not the live park app) ====== -->
 <div id="demo-banner" class="no-print" style="background: repeating-linear-gradient(45deg,#FFB300,#FFB300 14px,#1a1a1a 14px,#1a1a1a 28px); padding: 3px;">
   <div style="background:#FFF8E1; color:#5D4037; text-align:center; font-weight:700; font-size:13px; padding:6px 10px; letter-spacing:0.5px;">
-    DEMO VERSION — sandbox data only. This is <u>not</u> the live park maintenance log.
+    DEMO VERSION 3 — sandbox data only. This is <u>not</u> the live park maintenance log.
   </div>
 </div>
 
@@ -736,7 +805,7 @@
 
 <header class="app" style="display:none;">
   <div>
-    <h1>Phoenix Coaster — Tracker <span style="color:#FFB300;">(DEMO)</span></h1>
+    <h1>Phoenix Coaster — Tracker <span style="color:#FFB300;">(DEMO)</span> <span class="ver-badge">v3</span></h1>
     <div class="sub">DEMO sandbox · Vekoma Suspended Family Coaster · IB 45032</div>
   </div>
   <div class="user-widget no-print">
@@ -1326,7 +1395,7 @@
     <div class="tile accent-gold" style="margin-top: 12px;">
       <div class="label" style="margin-bottom: 6px;">Manual PDF location — used by the Ref column links</div>
       <p style="font-size: 12px; margin: 4px 0 10px; color: #444;">
-        Paste the full path or URL to your copy of <i>Manual OMM_45032_EN_01.pdf</i>. Once set, clicking a Ref like <b>4.2.2</b> in any inspection table opens the manual to that exact page.
+        Paste the full path or URL to your copy of <i>Manual OMM_45032_EN_01.pdf</i>, or use <b>Upload PDF…</b>. Once set, clicking a Ref like <b>4.2.2</b> in any inspection table opens the manual to that exact page. Uploaded manuals open inside the tracker and only for signed-in users.
       </p>
       <div class="field" style="margin-bottom: 8px;">
         <label for="setting-manual-path">Manual path or URL</label>
@@ -1366,6 +1435,25 @@
           <b>Heads-up:</b> Local file links only work when you open <code>Phoenix_Tracker.html</code> directly in your browser. The Claude artifact view is sandboxed and can't open <code>file://</code> links — you'd need a hosted URL for that.</p>
         </div>
       </details>
+    </div>
+
+    <!-- ====== v3: ASK-THE-MANUALS INDEX (admin only) ====== -->
+    <div class="admin-only">
+      <div class="tile" style="margin-top: 12px; border-color: var(--gold);">
+        <div class="label" style="margin-bottom: 6px;">Ask the manuals — search index</div>
+        <p style="font-size: 12px; margin: 4px 0 10px; color: #444;">
+          The voice assistant searches every PDF in the tracker's manual storage (everything uploaded with <b>Upload PDF…</b>).
+          After uploading or replacing a manual, run <b>Rebuild index</b>. Rebuilding also switches off the manuals' old public
+          download links, so manuals only open for signed-in users.
+        </p>
+        <div id="ai-index-status" style="font-size: 12px; margin-bottom: 10px; color: #555;">Tap <b>Check status</b> to see which manuals are searchable.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button class="ghost" type="button" onclick="AiAdmin.status()">Check status</button>
+          <button class="primary" type="button" onclick="AiAdmin.rebuild(false)">Rebuild index &amp; lock links</button>
+          <button class="ghost" type="button" onclick="AiAdmin.rebuild(true)" title="Re-read every manual even if unchanged">Full rebuild</button>
+        </div>
+        <div id="ai-index-msg" style="font-size: 12px; margin-top: 8px;"></div>
+      </div>
     </div>
 
     <!-- ====== REFERENCE DOCUMENTS EDITOR (admin only) ====== -->
@@ -1614,6 +1702,15 @@
         <button type="button" class="ghost" onclick="App.closeGuide()">✕ Close</button>
       </div>
       <div class="guide-body">
+
+        <h2>New in Version 3 — Ask the manuals</h2>
+        <ul>
+          <li>Tap <b>🎤 Ask the manuals</b> (bottom right), tap the microphone and ask out loud — or type. Example: <i>"What torque for the fixed EC brake bolts?"</i></li>
+          <li>Answers come only from the Phoenix manuals (operation manual, parts list, diagrams, Vekoma technical specs, OEM docs) and are read aloud. Turn speech off with <b>🔊</b>.</li>
+          <li>Every answer lists the <b>pages it came from</b>. Tap one to open that page and check it before you torque, replace or sign off — the manual is the authority.</li>
+          <li>Follow-up questions work ("and the washers?"). Tap <b>New</b> to start over.</li>
+          <li>Manuals now open <b>only for signed-in users</b>. Ref links and the Reference library open pages inside the tracker.</li>
+        </ul>
 
         <h2>1. Logging in &amp; roles</h2>
         <p>The tracker is one web page backed by a shared cloud database. Sign in with your email and password — everything you save syncs to every other signed-in device within seconds.</p>
@@ -1891,6 +1988,9 @@ import {
 import {
   getStorage, ref as storageRef, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+import {
+  getFunctions, httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-functions.js";
 
 /* DEMO CONFIG — points at the vekoma-demo sandbox project, NOT the live park log. */
 const firebaseConfig = {
@@ -1914,6 +2014,10 @@ try {
   db = initializeFirestore(fbApp, { localCache: persistentLocalCache() });
 }
 const storage = getStorage(fbApp);
+// v3 server functions (manual assistant + login-only manual pages). Region must
+// match setGlobalOptions in functions/index.js.
+const functions = getFunctions(fbApp, "us-central1");
+const callFn = (name, timeoutMs) => httpsCallable(functions, name, { timeout: timeoutMs || 70000 });
 
 function setSyncDot(state) {
   const d = document.getElementById("sync-dot");
@@ -2157,6 +2261,8 @@ const Auth = {
     const h = document.querySelector("header.app");
     if (h) h.style.display = "none";
     document.body.classList.remove("role-admin", "role-supervisor", "role-mechanic");
+    if (window.Assistant) Assistant.reset();
+    if (window.ManualViewer) ManualViewer.close();
     App.stop();
   },
 
@@ -2371,8 +2477,10 @@ window.Photos = Photos;
    Manuals — upload / replace PDFs in Firebase Storage
    ============================================================
    Each manual is stored at manuals/{sanitized}.pdf. Reads are gated by the
-   storage.rules "isStaff" check; writes are admin-only. The download URL is
-   stable per file path (the SDK signs a long-lived token URL on first call).
+   storage.rules "isStaff" check; writes are admin-only. v3: settings keep the
+   storage path ("manuals/x.pdf"), never a public download URL — manuals open
+   through ManualViewer for signed-in users only, and Rebuild index strips any
+   download tokens left on the files.
 */
 const Manuals = {
   MAX_BYTES: 200 * 1024 * 1024,           // 200 MB hard cap (matches storage.rules)
@@ -2388,7 +2496,7 @@ const Manuals = {
   },
 
   /** Upload a PDF to manuals/{sanitizedFilename}. onProgress receives a number
-   *  0..100. Returns {url, storagePath, sizeBytes, name}. */
+   *  0..100. Returns {url, storagePath, sizeBytes, name}; url is the storage path. */
   async upload(file, sanitizedFilename, onProgress) {
     if (!Auth.profile) throw new Error("Not signed in");
     if (!Auth.isAdmin()) throw new Error("Only admins can upload manuals.");
@@ -2414,9 +2522,8 @@ const Manuals = {
         () => resolve(),
       );
     });
-    const url = await getDownloadURL(task.snapshot.ref);
     return {
-      url,
+      url:         path,
       storagePath: path,
       sizeBytes:   file.size,
       name:        file.name,
@@ -2424,6 +2531,477 @@ const Manuals = {
   },
 };
 window.Manuals = Manuals;
+
+/* ============================================================
+   v3 — login-only manual links
+   ============================================================
+   A manual in this project's Storage (a "manuals/…" path, a gs:// URL, or an
+   old Firebase download URL saved by v2) opens in ManualViewer, which fetches
+   pages through the manualPage function after checking the user's login.
+   Anything else (local paths, other websites) keeps opening as a plain link. */
+function storagePathFromRef(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  if (/^manuals\/[^?#]+\.pdf$/i.test(s)) return s;
+  const gs = s.match(/^gs:\/\/([^/]+)\/(manuals\/[^?#]+\.pdf)$/i);
+  if (gs && gs[1] === firebaseConfig.storageBucket) return gs[2];
+  const dl = s.match(/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/([^/]+)\/o\/([^?#]+)/i);
+  if (dl && dl[1] === firebaseConfig.storageBucket) {
+    const path = decodeURIComponent(dl[2]);
+    if (/^manuals\/.+\.pdf$/i.test(path)) return path;
+  }
+  return null;
+}
+
+function escAttr(v) {
+  return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** href/target attributes for a PDF link: in-app viewer for our Storage, plain link otherwise. */
+function pdfLinkAttrs(rawPath, page, title) {
+  const sp = storagePathFromRef(rawPath);
+  if (sp) {
+    return `href="#" data-manual-path="${escAttr(sp)}" data-page="${Number(page) || 1}"` +
+           (title ? ` data-title="${escAttr(title)}"` : "");
+  }
+  return `href="${buildPdfUrl(rawPath, page)}" target="_blank" rel="noopener"`;
+}
+
+document.addEventListener("click", (ev) => {
+  const a = ev.target && ev.target.closest && ev.target.closest("a[data-manual-path]");
+  if (!a) return;
+  ev.preventDefault();
+  ManualViewer.open(a.dataset.manualPath, Number(a.dataset.page) || 1, a.dataset.title || "");
+});
+
+/* ============================================================
+   v3 — Manual page viewer
+   ============================================================
+   Shows a few pages at a time, rendered with pdf.js, so phones never have to
+   download a whole 40–70 MB manual. Prev/Next fetch the neighbouring pages. */
+const PDFJS_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/legacy/build/";
+let pdfjsPromise = null;
+function loadPdfJs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = (async () => {
+      const lib = await import(PDFJS_BASE + "pdf.min.mjs");
+      try {
+        // Cross-origin module workers are blocked, so run the worker from a same-origin blob.
+        const src = await (await fetch(PDFJS_BASE + "pdf.worker.min.mjs")).text();
+        const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+        lib.GlobalWorkerOptions.workerPort = new Worker(url, { type: "module" });
+      } catch (e) {
+        console.warn("pdf.js worker fallback:", e);
+        lib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + "pdf.worker.min.mjs";
+      }
+      return lib;
+    })().catch((e) => { pdfjsPromise = null; throw e; });
+  }
+  return pdfjsPromise;
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const MANUAL_TITLES = [
+  [/OMM_45032/i, "Operation & Maintenance Manual"],
+  [/PRT_45032/i, "Parts List"],
+  [/DIA_45032/i, "Diagrams"],
+  [/TS_DOKU|DOKU-08/i, "Vekoma Technical Specifications"],
+  [/OEM_45032/i, "OEM Documentation"],
+];
+function manualTitleFor(path) {
+  const file = String(path).split("/").pop();
+  const known = MANUAL_TITLES.find(([re]) => re.test(file));
+  return known ? known[1] : file.replace(/\.pdf$/i, "").replace(/_/g, " ");
+}
+
+const ManualViewer = {
+  PAGES_PER_LOAD: 4,
+  path: null, title: "", first: 1, last: 1, total: 0, zoomLevel: 1,
+  _bytes: null, _doc: null, _task: null, _seq: 0,
+
+  open(path, page, title) {
+    this.path = path;
+    this.title = title || manualTitleFor(path);
+    this.zoomLevel = 1;
+    document.getElementById("mv-bg").classList.add("open");
+    this.load(page || 1);
+  },
+
+  close() {
+    document.getElementById("mv-bg").classList.remove("open");
+    this._seq++;
+    this._release();
+    document.getElementById("mv-body").innerHTML = "";
+  },
+
+  // pdf.js documents are torn down through their loading task, and the next
+  // document may only be opened once that has finished.
+  async _release() {
+    const task = this._task;
+    this._task = null;
+    this._doc = null;
+    if (task) await task.destroy().catch(() => {});
+  },
+
+  _status(html) {
+    document.getElementById("mv-body").innerHTML = `<div class="mv-status">${html}</div>`;
+  },
+
+  _header() {
+    document.getElementById("mv-title").innerHTML =
+      `${App.escape(this.title)}<small id="mv-sub">${this.total ? `PDF pages ${this.first}–${this.last} of ${this.total}` : "Loading…"}</small>`;
+    document.getElementById("mv-prev").disabled = !this.total || this.first <= 1;
+    document.getElementById("mv-next").disabled = !this.total || this.last >= this.total;
+  },
+
+  async load(page) {
+    const seq = ++this._seq;
+    this.total = 0;
+    this._header();
+    this._status("Loading manual pages…");
+    try {
+      const [lib, res] = await Promise.all([
+        loadPdfJs(),
+        callFn("manualPage", 120000)({ path: this.path, page, count: this.PAGES_PER_LOAD }),
+      ]);
+      if (seq !== this._seq) return;
+      const { pdf, first, last, total } = res.data;
+      Object.assign(this, { first, last, total });
+      this._bytes = base64ToBytes(pdf);
+      await this._release();
+      if (seq !== this._seq) return;
+      this._task = lib.getDocument({ data: this._bytes.slice() });
+      this._doc = await this._task.promise;
+      this._header();
+      await this.render(seq);
+    } catch (e) {
+      if (seq !== this._seq) return;
+      console.error("Manual viewer:", e);
+      this._status(`Couldn't open this manual page.<br><small>${App.escape(friendlyFnError(e))}</small>`);
+    }
+  },
+
+  async render(seq) {
+    const body = document.getElementById("mv-body");
+    body.innerHTML = "";
+    const avail = Math.max(280, body.clientWidth - 20);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    for (let i = 1; i <= this._doc.numPages; i++) {
+      const page = await this._doc.getPage(i);
+      if (seq !== this._seq) return;
+      const base = page.getViewport({ scale: 1 });
+      const cssScale = (avail / base.width) * this.zoomLevel;
+      const vp = page.getViewport({ scale: cssScale * dpr });
+      const wrap = document.createElement("div");
+      wrap.className = "mv-page";
+      wrap.style.width = Math.floor(base.width * cssScale) + "px";
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.floor(vp.width);
+      canvas.height = Math.floor(vp.height);
+      canvas.style.width = Math.floor(base.width * cssScale) + "px";
+      canvas.style.height = Math.floor(base.height * cssScale) + "px";
+      wrap.appendChild(canvas);
+      const tag = document.createElement("span");
+      tag.className = "pg";
+      tag.textContent = `p. ${this.first + i - 1}`;
+      wrap.appendChild(tag);
+      body.appendChild(wrap);
+      try {
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+      } catch (e) {
+        if (seq !== this._seq || (e && e.name === "RenderingCancelledException")) return;  // closed or reloaded meanwhile
+        throw e;
+      }
+    }
+    body.scrollTop = 0;
+  },
+
+  prev() { if (this.first > 1) this.load(Math.max(1, this.first - this.PAGES_PER_LOAD)); },
+  next() { if (this.last < this.total) this.load(this.last + 1); },
+
+  zoom(dir) {
+    if (!this._doc) return;
+    const levels = [1, 1.5, 2, 3, 4];
+    const i = levels.indexOf(this.zoomLevel);
+    const n = Math.min(levels.length - 1, Math.max(0, (i < 0 ? 0 : i) + dir));
+    if (levels[n] === this.zoomLevel) return;
+    this.zoomLevel = levels[n];
+    this.render(this._seq).catch((e) => console.warn("Manual viewer zoom:", e));
+  },
+
+  openRaw() {
+    if (!this._bytes) return;
+    const url = URL.createObjectURL(new Blob([this._bytes], { type: "application/pdf" }));
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+  },
+};
+window.ManualViewer = ManualViewer;
+
+function friendlyFnError(e) {
+  const code = String((e && e.code) || "").replace(/^functions\//, "");
+  if (code === "not-found") return "The manual server functions aren't set up yet (deploy the v3 functions).";
+  if (code === "unauthenticated") return "Please sign in again.";
+  if (code === "permission-denied" || code === "resource-exhausted" || code === "failed-precondition" || code === "invalid-argument") {
+    return e.message;
+  }
+  if (code === "deadline-exceeded") return "That took too long. Try again.";
+  if (code === "unavailable" || !navigator.onLine) return "No connection to the server. Check your signal and try again.";
+  return (e && e.message) || "Something went wrong.";
+}
+
+/* ============================================================
+   v3 — Ask the manuals (voice assistant)
+   ============================================================
+   Tap the mic, speak; the browser turns speech into text, the askManual
+   function answers from the manuals, and the browser reads the answer aloud. */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+const ASK_SPEAK_KEY = "phoenix-ask-speak";
+
+const Assistant = {
+  history: [],
+  busy: false,
+  rec: null,
+  speakOn: true,
+  _unlocked: false,
+
+  open() {
+    try { this.speakOn = localStorage.getItem(ASK_SPEAK_KEY) !== "off"; } catch (_) {}
+    this._speakButton();
+    document.body.classList.add("ask-open");
+    if (!SpeechRec) {
+      const mic = document.getElementById("ask-mic");
+      mic.disabled = true;
+      mic.title = "Voice input isn't available in this browser — type, or use your keyboard's mic key.";
+    }
+    setTimeout(() => { if (!SpeechRec) document.getElementById("ask-input").focus(); }, 50);
+  },
+
+  close() {
+    this.stopListening(true);
+    this.stopSpeaking();
+    document.body.classList.remove("ask-open");
+  },
+
+  reset() {
+    this.close();
+    this.clear();
+  },
+
+  clear() {
+    this.stopSpeaking();
+    this.history = [];
+    const log = document.getElementById("ask-log");
+    log.querySelectorAll(".ask-msg").forEach((el) => el.remove());
+  },
+
+  toggleSpeak() {
+    this.speakOn = !this.speakOn;
+    try { localStorage.setItem(ASK_SPEAK_KEY, this.speakOn ? "on" : "off"); } catch (_) {}
+    if (!this.speakOn) this.stopSpeaking();
+    this._speakButton();
+  },
+
+  _speakButton() {
+    const b = document.getElementById("ask-speak-toggle");
+    if (b) b.textContent = this.speakOn ? "🔊 On" : "🔇 Off";
+  },
+
+  // iOS only lets a page speak after speech was started from a tap; prime it here.
+  _unlockSpeech() {
+    if (this._unlocked || !window.speechSynthesis) return;
+    try {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+      this._unlocked = true;
+    } catch (_) {}
+  },
+
+  speak(text) {
+    if (!this.speakOn || !window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find((x) => x.lang === "en-US" && x.localService) || voices.find((x) => x.lang === "en-US");
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  },
+
+  stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  },
+
+  toggleListening() {
+    this._unlockSpeech();
+    if (this.rec) { this.stopListening(false); return; }
+    if (!SpeechRec || this.busy) return;
+    this.stopSpeaking();
+    const input = document.getElementById("ask-input");
+    const rec = new SpeechRec();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    let heard = "";
+    rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) heard += r[0].transcript; else interim += r[0].transcript;
+      }
+      input.value = (heard + " " + interim).replace(/\s+/g, " ").trim();
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        this._error("Microphone access is blocked. Allow the microphone for this site in your browser settings (on iPhone, Siri & Dictation must also be on), or type your question.");
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        this._error(`Didn't catch that (${e.error}). Try again or type your question.`);
+      }
+    };
+    rec.onend = () => {
+      const cancelled = rec._cancelled;
+      this.rec = null;
+      this._micState(false);
+      const q = input.value.trim();
+      if (q && !cancelled) this.ask(q);
+    };
+    try {
+      rec.start();
+      this.rec = rec;
+      input.value = "";
+      input.placeholder = "Listening…";
+      this._micState(true);
+    } catch (e) {
+      this._error("Couldn't start the microphone. Type your question instead.");
+    }
+  },
+
+  stopListening(cancel) {
+    if (!this.rec) return;
+    this.rec._cancelled = !!cancel;
+    try { cancel ? this.rec.abort() : this.rec.stop(); } catch (_) {}
+  },
+
+  _micState(on) {
+    const mic = document.getElementById("ask-mic");
+    mic.classList.toggle("listening", on);
+    mic.textContent = on ? "■" : "🎤";
+    mic.title = on ? "Tap to stop" : "Tap to talk";
+    if (!on) document.getElementById("ask-input").placeholder = "Ask about a part, torque, procedure…";
+  },
+
+  askFromInput() {
+    this._unlockSpeech();
+    const input = document.getElementById("ask-input");
+    const q = input.value.trim();
+    if (q) this.ask(q);
+  },
+
+  _add(cls, html) {
+    const log = document.getElementById("ask-log");
+    const el = document.createElement("div");
+    el.className = "ask-msg " + cls;
+    el.innerHTML = html;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  },
+
+  _error(text) {
+    this._add("err", App.escape(text));
+  },
+
+  _format(text) {
+    return App.escape(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+  },
+
+  async ask(question) {
+    if (this.busy) return;
+    this.busy = true;
+    document.getElementById("ask-input").value = "";
+    this._add("q", App.escape(question));
+    const pending = this._add("a pending", "Looking it up in the manuals…");
+    const started = Date.now();
+    const tick = setInterval(() => {
+      const sec = Math.round((Date.now() - started) / 1000);
+      if (sec >= 8) pending.textContent = `Looking it up in the manuals… (${sec}s — checking pages)`;
+    }, 1000);
+    try {
+      const res = await callFn("askManual", 300000)({ question, history: this.history });
+      const r = res.data || {};
+      const warn = r.found === "no"
+        ? `<div class="warn">⚠ Not found clearly in the manuals.</div>`
+        : r.found === "partly" ? `<div class="warn">⚠ Partly answered — check the pages.</div>` : "";
+      const cites = (r.citations || []).map((c) =>
+        `<a class="cite" ${pdfLinkAttrs(c.path, c.page, c.title)} title="Open ${escAttr(c.title)}, PDF page ${Number(c.page)}">` +
+        `📄 ${App.escape(c.title)} p.${Number(c.page)}${c.what ? " — " + App.escape(c.what) : ""}</a>`).join("");
+      pending.className = "ask-msg a";
+      pending.innerHTML = `${warn}${this._format(r.answer || "")}` +
+        (cites ? `<div class="cites">${cites}</div>` : "") +
+        `<div class="meta"><span>${((r.ms || 0) / 1000).toFixed(0)}s</span>` +
+        `<button type="button" title="Read aloud again">🔊 Replay</button></div>`;
+      const spoken = r.spoken || r.answer || "";
+      pending.querySelector(".meta button").onclick = () => { this._unlockSpeech(); const was = this.speakOn; this.speakOn = true; this.speak(spoken); this.speakOn = was; };
+      this.history.push({ q: question, a: r.answer || "" });
+      if (this.history.length > 6) this.history = this.history.slice(-6);
+      this.speak(spoken);
+      document.getElementById("ask-log").scrollTop = document.getElementById("ask-log").scrollHeight;
+    } catch (e) {
+      console.error("askManual:", e);
+      pending.className = "ask-msg err";
+      pending.textContent = friendlyFnError(e);
+    } finally {
+      clearInterval(tick);
+      this.busy = false;
+    }
+  },
+};
+window.Assistant = Assistant;
+
+/* ============================================================
+   v3 — Admin: manual search index + download-link lock
+   ============================================================ */
+const AiAdmin = {
+  async status() {
+    const el = document.getElementById("ai-index-status");
+    el.textContent = "Checking…";
+    try {
+      const res = await callFn("manualIndexStatus", 120000)({});
+      const list = res.data.manuals || [];
+      el.innerHTML = list.length
+        ? `<b>${list.length} manual${list.length === 1 ? "" : "s"} searchable:</b><br>` +
+          list.map((m) => `• ${App.escape(m.title)} — ${Number(m.pages)} pages <span style="color:#888;">(${App.escape(m.file)})</span>`).join("<br>")
+        : `<span style="color:#C62828;">No manuals indexed yet.</span> Run <b>Rebuild index &amp; lock links</b>.`;
+    } catch (e) {
+      el.innerHTML = `<span style="color:#C62828;">${App.escape(friendlyFnError(e))}</span>`;
+    }
+  },
+
+  async rebuild(force) {
+    if (!Auth.isAdmin()) { alert("Admins only."); return; }
+    const msg = document.getElementById("ai-index-msg");
+    msg.innerHTML = `Reading the manuals… this can take a few minutes for large PDFs. Keep this page open.`;
+    try {
+      const res = await callFn("rebuildManualIndex", 30 * 60 * 1000)({ force: !!force });
+      const { locked, manuals } = res.data;
+      msg.innerHTML = `<span style="color:#2E7D32;">✓ Done.</span> ` +
+        (locked ? `Locked ${locked} public download link${locked === 1 ? "" : "s"}. ` : "No open download links left. ") +
+        `<br>` + manuals.map((m) => `• ${App.escape(m.file)} — ${Number(m.pages)} pages (${App.escape(m.status)})`).join("<br>");
+      this.status();
+    } catch (e) {
+      msg.innerHTML = `<span style="color:#C62828;">Rebuild failed:</span> ${App.escape(friendlyFnError(e))}`;
+    }
+  },
+};
+window.AiAdmin = AiAdmin;
 
 /* ============================================================
    PHOENIX COASTER TRACKER — embedded data + app logic
@@ -2736,16 +3314,11 @@ function buildPdfUrl(rawPath, page) {
   return `${encoded}${frag}`;
 }
 
-/* Manual-specific shim — keeps existing callers (inspection Ref links, etc.) unchanged. */
-function buildManualUrl(page) {
-  const path = (getManualPath() || "").trim() || DEFAULT_MANUAL_PATH;
-  return buildPdfUrl(path, page);
-}
-
 function manualRefLink(ref) {
   const page = SECTION_PAGES[ref];
   if (!page) return `<span class="ref">${ref}</span>`;
-  return `<a class="ref-link" href="${buildManualUrl(page)}" target="_blank" rel="noopener" title="Open manual §${ref} (PDF page ${page})">${ref}</a>`;
+  const path = (getManualPath() || "").trim() || DEFAULT_MANUAL_PATH;
+  return `<a class="ref-link" ${pdfLinkAttrs(path, page, "Operation & Maintenance Manual")} title="Open manual §${ref} (PDF page ${page})">${ref}</a>`;
 }
 
 const App = {
@@ -6705,7 +7278,7 @@ const App = {
         this._setUploadProgress("manual-upload", null);
         const statusEl = document.getElementById("setting-status");
         if (statusEl) {
-          statusEl.innerHTML = `<span style="color: #2E7D32;">✓ Uploaded ${this.escape(safe)} (${sizeMb} MB).</span> Click <b>Save</b> below to make it the active manual.`;
+          statusEl.innerHTML = `<span style="color: #2E7D32;">✓ Uploaded ${this.escape(safe)} (${sizeMb} MB).</span> Click <b>Save</b> below to make it the active manual, then <b>Rebuild index</b> so Ask the manuals can search it.`;
         }
       } catch (e) {
         this._setUploadProgress("manual-upload", null);
@@ -6741,7 +7314,7 @@ const App = {
         this._setUploadProgress("ref-doc-upload", null);
         const statusEl = document.getElementById("ref-doc-status");
         if (statusEl) {
-          statusEl.innerHTML = `<span style="color: #2E7D32;">✓ Uploaded ${this.escape(safe)} (${sizeMb} MB).</span> Click <b>Save document</b> below to add it to the library.`;
+          statusEl.innerHTML = `<span style="color: #2E7D32;">✓ Uploaded ${this.escape(safe)} (${sizeMb} MB).</span> Click <b>Save document</b> below to add it to the library, then <b>Rebuild index</b> so Ask the manuals can search it.`;
         }
       } catch (e) {
         this._setUploadProgress("ref-doc-upload", null);
@@ -6774,7 +7347,14 @@ const App = {
   },
 
   testManualPath() {
-    const url = buildManualUrl(SECTION_PAGES["4.2.2"]);
+    const raw = (document.getElementById("setting-manual-path").value || "").trim() || getManualPath();
+    const sp = storagePathFromRef(raw);
+    if (sp) {
+      document.getElementById("setting-status").innerHTML = `Opening <code>${this.escape(sp)}</code> in the tracker's viewer…`;
+      ManualViewer.open(sp, SECTION_PAGES["4.2.2"], "Operation & Maintenance Manual");
+      return;
+    }
+    const url = buildPdfUrl(raw, SECTION_PAGES["4.2.2"]);
     document.getElementById("setting-status").innerHTML =
       `Opening: <code>${this.escape(url)}</code>`;
     window.open(url, "_blank", "noopener");
@@ -6805,16 +7385,14 @@ const App = {
       return;
     }
     host.innerHTML = docs.map(d => {
-      const url1 = buildPdfUrl(d.path, 1);
       const titleHtml = this.escape(d.title);
       const pathHtml = this.escape(d.path || "(no path set)");
       const openBtn = d.path
-        ? `<a class="open-pdf-btn" href="${url1}" target="_blank" rel="noopener">Open PDF</a>`
+        ? `<a class="open-pdf-btn" ${pdfLinkAttrs(d.path, 1, d.title)}>Open PDF</a>`
         : `<span style="font-size: 11px; color: #c62828;">⚠ No path set</span>`;
       const chips = (d.bookmarks && d.bookmarks.length)
         ? `<div class="bookmark-chips">${d.bookmarks.map(b => {
-            const u = buildPdfUrl(d.path, b.page);
-            return `<a class="bookmark-chip" href="${u}" target="_blank" rel="noopener" title="Open ${this.escape(d.title)} at page ${Number(b.page)}">${this.escape(b.label)} <span class="pg">· p.${Number(b.page)}</span></a>`;
+            return `<a class="bookmark-chip" ${pdfLinkAttrs(d.path, b.page, d.title)} title="Open ${this.escape(d.title)} at page ${Number(b.page)}">${this.escape(b.label)} <span class="pg">· p.${Number(b.page)}</span></a>`;
           }).join("")}</div>`
         : "";
       return `<div class="ref-doc-tile">
@@ -7199,5 +7777,49 @@ document.addEventListener("DOMContentLoaded", () => {
   Auth.init();
 });
 </script>
+
+<!-- ====== v3: Ask the manuals (voice assistant) ====== -->
+<button type="button" class="ask-fab no-print" onclick="Assistant.open()" title="Ask the manuals — part numbers, torques, procedures">🎤 Ask the manuals</button>
+<div class="ask-panel no-print" id="ask-panel" role="dialog" aria-label="Ask the manuals">
+  <div class="ask-head">
+    <div class="t">Ask the manuals <div class="sub">Phoenix · Vekoma IB 45032</div></div>
+    <button type="button" id="ask-speak-toggle" onclick="Assistant.toggleSpeak()" title="Read answers aloud">🔊 On</button>
+    <button type="button" onclick="Assistant.clear()" title="Start a new conversation">New</button>
+    <button type="button" onclick="Assistant.close()" title="Close">✕</button>
+  </div>
+  <div class="ask-log" id="ask-log">
+    <div class="ask-intro">
+      Tap <b>🎤</b> and ask, or type below. Answers come only from the Phoenix manuals, with the page to check.
+      <ul>
+        <li>"What's the torque for the fixed EC brake bolts?"</li>
+        <li>"Part number for the lap bar padding?"</li>
+        <li>"What's the catalogue number for connector X34F?"</li>
+        <li>"How do I reset after an emergency stop?"</li>
+      </ul>
+    </div>
+  </div>
+  <form class="ask-foot" onsubmit="event.preventDefault(); Assistant.askFromInput();">
+    <button type="button" class="ask-mic" id="ask-mic" onclick="Assistant.toggleListening()" title="Tap to talk">🎤</button>
+    <input type="text" id="ask-input" placeholder="Ask about a part, torque, procedure…" autocomplete="off" enterkeyhint="send">
+    <button type="submit" class="ask-send">Ask</button>
+  </form>
+  <div class="ask-note">Always confirm on the cited page before you torque, replace or sign off. The manual is the authority.</div>
+</div>
+
+<!-- ====== v3: Manual page viewer (signed-in only; pages come through the server) ====== -->
+<div class="mv-bg no-print" id="mv-bg" onclick="if (event.target === this) ManualViewer.close()">
+  <div class="mv">
+    <div class="mv-head">
+      <div class="t" id="mv-title">Manual<small id="mv-sub"></small></div>
+      <button type="button" id="mv-prev" onclick="ManualViewer.prev()">◀ Prev</button>
+      <button type="button" id="mv-next" onclick="ManualViewer.next()">Next ▶</button>
+      <button type="button" onclick="ManualViewer.zoom(-1)" title="Zoom out">−</button>
+      <button type="button" onclick="ManualViewer.zoom(1)" title="Zoom in">+</button>
+      <button type="button" onclick="ManualViewer.openRaw()" title="Open these pages in your PDF viewer">⤢ PDF</button>
+      <button type="button" onclick="ManualViewer.close()">✕</button>
+    </div>
+    <div class="mv-body" id="mv-body"></div>
+  </div>
+</div>
 </body>
 </html>
